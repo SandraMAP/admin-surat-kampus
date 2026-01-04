@@ -4,7 +4,7 @@ import { FileText, Download, Eye, Loader2, History, LogOut } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client';
 import { StudentLayout } from '@/components/layout/StudentLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +12,7 @@ import { PengajuanSurat } from '@/types/database';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { User } from '@supabase/supabase-js';
+import { downloadFile } from '@/lib/storage-utils';
 
 export default function RiwayatPage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function RiwayatPage() {
   const [pengajuanList, setPengajuanList] = useState<PengajuanSurat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPengajuan, setSelectedPengajuan] = useState<PengajuanSurat | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -76,6 +78,25 @@ export default function RiwayatPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
+  };
+
+  const handleDownload = async (pengajuan: PengajuanSurat) => {
+    if (!pengajuan.file_surat_url) return;
+    
+    setDownloadingId(pengajuan.id);
+    try {
+      const fileName = `Surat_${pengajuan.nomor_pengajuan.replace(/\//g, '-')}.pdf`;
+      await downloadFile(pengajuan.file_surat_url, fileName);
+      toast({ title: 'Berhasil', description: 'Surat berhasil didownload' });
+    } catch (error: any) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Error', 
+        description: 'Gagal mendownload surat. Silakan coba lagi.' 
+      });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const formatDate = (date: string) => {
@@ -158,11 +179,18 @@ export default function RiwayatPage() {
                           <Eye className="h-4 w-4" />
                         </Button>
                         {pengajuan.file_surat_url && pengajuan.status === 'SELESAI' && (
-                          <a href={pengajuan.file_surat_url} target="_blank" rel="noopener noreferrer">
-                            <Button variant="outline" size="icon">
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => handleDownload(pengajuan)}
+                            disabled={downloadingId === pengajuan.id}
+                          >
+                            {downloadingId === pengajuan.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
                               <Download className="h-4 w-4" />
-                            </Button>
-                          </a>
+                            )}
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -212,17 +240,18 @@ export default function RiwayatPage() {
               </div>
 
               {selectedPengajuan.file_surat_url && selectedPengajuan.status === 'SELESAI' && (
-                <a 
-                  href={selectedPengajuan.file_surat_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block"
+                <Button 
+                  className="w-full gap-2"
+                  onClick={() => handleDownload(selectedPengajuan)}
+                  disabled={downloadingId === selectedPengajuan.id}
                 >
-                  <Button className="w-full gap-2">
+                  {downloadingId === selectedPengajuan.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
                     <Download className="h-4 w-4" />
-                    Download Surat
-                  </Button>
-                </a>
+                  )}
+                  Download Surat
+                </Button>
               )}
             </div>
           )}
