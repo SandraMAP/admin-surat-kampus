@@ -13,7 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { JenisSurat } from '@/types/database';
+import { JenisSurat, Mahasiswa } from '@/types/database';
+import { User } from '@supabase/supabase-js';
 
 const formSchema = z.object({
   nama: z.string().min(3, 'Nama minimal 3 karakter').max(100),
@@ -30,8 +31,11 @@ type FormValues = z.infer<typeof formSchema>;
 export default function SubmitPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+  const [mahasiswa, setMahasiswa] = useState<Mahasiswa | null>(null);
   const [jenisSuratList, setJenisSuratList] = useState<JenisSurat[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
   const [nomorPengajuan, setNomorPengajuan] = useState('');
 
@@ -49,8 +53,51 @@ export default function SubmitPage() {
   });
 
   useEffect(() => {
+    checkAuth();
     fetchJenisSurat();
   }, []);
+
+  const checkAuth = async () => {
+    setIsCheckingAuth(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
+
+      setUser(user);
+
+      // Check if user has mahasiswa profile
+      const { data: mahasiswaData } = await supabase
+        .from('mahasiswa')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (mahasiswaData) {
+        setMahasiswa(mahasiswaData as Mahasiswa);
+        form.reset({
+          nama: mahasiswaData.nama,
+          nim: mahasiswaData.nim,
+          program_studi: mahasiswaData.program_studi,
+          email: mahasiswaData.email,
+          no_hp: mahasiswaData.no_hp,
+          jenis_surat_id: '',
+          keperluan: '',
+        });
+      } else {
+        // Pre-fill email from auth
+        form.setValue('email', user.email || '');
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+      navigate('/auth');
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  };
 
   const fetchJenisSurat = async () => {
     const { data, error } = await supabase
@@ -68,20 +115,18 @@ export default function SubmitPage() {
   };
 
   const onSubmit = async (values: FormValues) => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Check if mahasiswa exists
       let mahasiswaId: string;
       
-      const { data: existingMahasiswa } = await supabase
-        .from('mahasiswa')
-        .select('id')
-        .eq('nim', values.nim)
-        .maybeSingle();
-
-      if (existingMahasiswa) {
-        mahasiswaId = existingMahasiswa.id;
+      if (mahasiswa) {
+        mahasiswaId = mahasiswa.id;
         
         // Update mahasiswa data
         await supabase
@@ -94,21 +139,45 @@ export default function SubmitPage() {
           })
           .eq('id', mahasiswaId);
       } else {
-        // Create new mahasiswa
-        const { data: newMahasiswa, error: mahasiswaError } = await supabase
+        // Check if NIM already exists
+        const { data: existingMahasiswa } = await supabase
           .from('mahasiswa')
-          .insert({
-            nama: values.nama,
-            nim: values.nim,
-            program_studi: values.program_studi,
-            email: values.email,
-            no_hp: values.no_hp,
-          })
           .select('id')
-          .single();
+          .eq('nim', values.nim)
+          .maybeSingle();
 
-        if (mahasiswaError) throw mahasiswaError;
-        mahasiswaId = newMahasiswa.id;
+        if (existingMahasiswa) {
+          mahasiswaId = existingMahasiswa.id;
+          
+          // Update mahasiswa data and link to user
+          await supabase
+            .from('mahasiswa')
+            .update({
+              nama: values.nama,
+              program_studi: values.program_studi,
+              email: values.email,
+              no_hp: values.no_hp,
+              user_id: user.id,
+            })
+            .eq('id', mahasiswaId);
+        } else {
+          // Create new mahasiswa linked to user
+          const { data: newMahasiswa, error: mahasiswaError } = await supabase
+            .from('mahasiswa')
+            .insert({
+              nama: values.nama,
+              nim: values.nim,
+              program_studi: values.program_studi,
+              email: values.email,
+              no_hp: values.no_hp,
+              user_id: user.id,
+            })
+            .select('id')
+            .single();
+
+          if (mahasiswaError) throw mahasiswaError;
+          mahasiswaId = newMahasiswa.id;
+        }
       }
 
       // Create pengajuan
@@ -142,6 +211,16 @@ export default function SubmitPage() {
     }
   };
 
+  if (isCheckingAuth) {
+    return (
+      <StudentLayout>
+        <div className="container py-12 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </StudentLayout>
+    );
+  }
+
   if (isSuccess) {
     return (
       <StudentLayout>
@@ -167,7 +246,11 @@ export default function SubmitPage() {
                   className="flex-1"
                   onClick={() => {
                     setIsSuccess(false);
-                    form.reset();
+                    form.reset({
+                      ...form.getValues(),
+                      jenis_surat_id: '',
+                      keperluan: '',
+                    });
                   }}
                 >
                   Ajukan Lagi
@@ -200,6 +283,11 @@ export default function SubmitPage() {
             <p className="text-muted-foreground">
               Lengkapi form berikut untuk mengajukan surat
             </p>
+            {user && (
+              <p className="text-sm text-primary mt-2">
+                Login sebagai: {user.email}
+              </p>
+            )}
           </div>
 
           <Card className="animate-slide-up">
@@ -234,7 +322,11 @@ export default function SubmitPage() {
                         <FormItem>
                           <FormLabel>NIM</FormLabel>
                           <FormControl>
-                            <Input placeholder="Masukkan NIM" {...field} />
+                            <Input 
+                              placeholder="Masukkan NIM" 
+                              {...field} 
+                              disabled={!!mahasiswa}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

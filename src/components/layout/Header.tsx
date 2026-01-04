@@ -1,8 +1,10 @@
-import { FileText, Menu } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { FileText, Menu, LogIn, LogOut, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 const navLinks = [
   { label: 'Beranda', path: '/' },
@@ -11,7 +13,26 @@ const navLinks = [
 ];
 
 export function Header() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
   return (
     <header className="sticky top-0 z-50 glass-effect border-b">
@@ -37,11 +58,34 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-          <Link to="/admin">
-            <Button variant="outline" size="sm">
-              Admin Login
-            </Button>
-          </Link>
+          {user ? (
+            <div className="flex items-center gap-3">
+              <Link to="/riwayat">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <User className="h-4 w-4" />
+                  Riwayat
+                </Button>
+              </Link>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link to="/auth">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <LogIn className="h-4 w-4" />
+                  Login
+                </Button>
+              </Link>
+              <Link to="/admin">
+                <Button variant="ghost" size="sm">
+                  Admin
+                </Button>
+              </Link>
+            </div>
+          )}
         </nav>
 
         {/* Mobile Menu */}
@@ -63,9 +107,32 @@ export function Header() {
                   {link.label}
                 </Link>
               ))}
-              <Link to="/admin" onClick={() => setOpen(false)}>
-                <Button className="w-full mt-4">Admin Login</Button>
-              </Link>
+              {user ? (
+                <>
+                  <Link to="/riwayat" onClick={() => setOpen(false)}>
+                    <Button variant="outline" className="w-full gap-2">
+                      <User className="h-4 w-4" />
+                      Riwayat Pengajuan
+                    </Button>
+                  </Link>
+                  <Button onClick={() => { handleLogout(); setOpen(false); }} variant="ghost" className="w-full gap-2">
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link to="/auth" onClick={() => setOpen(false)}>
+                    <Button className="w-full gap-2">
+                      <LogIn className="h-4 w-4" />
+                      Login Mahasiswa
+                    </Button>
+                  </Link>
+                  <Link to="/admin" onClick={() => setOpen(false)}>
+                    <Button variant="outline" className="w-full">Admin Login</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </SheetContent>
         </Sheet>

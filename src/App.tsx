@@ -9,6 +9,8 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import HomePage from "./pages/student/HomePage";
 import SubmitPage from "./pages/student/SubmitPage";
 import TrackPage from "./pages/student/TrackPage";
+import AuthPage from "./pages/student/AuthPage";
+import RiwayatPage from "./pages/student/RiwayatPage";
 
 // Admin Pages
 import LoginPage from "./pages/admin/LoginPage";
@@ -54,8 +56,10 @@ const App = () => (
           <Routes>
             {/* Student Routes */}
             <Route path="/" element={<HomePage />} />
+            <Route path="/auth" element={<AuthPage />} />
             <Route path="/ajukan" element={<SubmitPage />} />
             <Route path="/lacak" element={<TrackPage />} />
+            <Route path="/riwayat" element={<RiwayatPage />} />
 
             {/* Admin Auth Routes */}
             <Route path="/admin" element={

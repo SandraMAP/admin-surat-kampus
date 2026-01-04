@@ -3,20 +3,21 @@ import {
   Search, 
   Filter, 
   Download, 
-  Upload, 
   Eye, 
-  Edit, 
   Trash2, 
   Loader2,
   FileUp,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowRight,
+  FileText,
+  Mail
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -28,6 +29,7 @@ import { PengajuanSurat, StatusPengajuan, WORKFLOW_ORDER } from '@/types/databas
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useAuth } from '@/hooks/useAuth';
+import { generateSuratKeterangan, downloadPDF, getPDFBlob } from '@/lib/pdf-generator';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -43,7 +45,6 @@ export default function PengajuanPage() {
   // Detail/Edit Dialog
   const [selectedPengajuan, setSelectedPengajuan] = useState<PengajuanSurat | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [editStatus, setEditStatus] = useState<StatusPengajuan>('DIAJUKAN');
   const [editCatatan, setEditCatatan] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -51,6 +52,9 @@ export default function PengajuanPage() {
   // File Upload
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // PDF Generation
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Delete Dialog
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -116,7 +120,7 @@ export default function PengajuanPage() {
     setSelectedPengajuan(pengajuan);
     setEditStatus(pengajuan.status);
     setEditCatatan(pengajuan.catatan_admin || '');
-    setIsEditing(false);
+    setUploadFile(null);
     setIsDetailOpen(true);
   };
 
@@ -128,11 +132,57 @@ export default function PengajuanPage() {
     return null;
   };
 
+  const handleAdvanceStatus = async () => {
+    if (!selectedPengajuan) return;
+    
+    const nextStatus = getNextStatus(selectedPengajuan.status);
+    if (!nextStatus) return;
+
+    setIsUpdating(true);
+    try {
+      const oldStatus = selectedPengajuan.status;
+
+      const { error } = await supabase
+        .from('pengajuan_surat')
+        .update({
+          status: nextStatus,
+          catatan_admin: editCatatan,
+          processed_by: adminProfile?.id,
+        })
+        .eq('id', selectedPengajuan.id);
+
+      if (error) throw error;
+
+      // Send email notification
+      try {
+        await supabase.functions.invoke('send-status-email', {
+          body: {
+            pengajuan_id: selectedPengajuan.id,
+            old_status: oldStatus,
+            new_status: nextStatus,
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send email notification:', emailError);
+      }
+
+      toast({ title: 'Berhasil', description: `Status berubah menjadi ${nextStatus}` });
+      setIsDetailOpen(false);
+      fetchPengajuan();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleUpdateStatus = async () => {
     if (!selectedPengajuan) return;
     
     setIsUpdating(true);
     try {
+      const oldStatus = selectedPengajuan.status;
+
       const { error } = await supabase
         .from('pengajuan_surat')
         .update({
@@ -144,6 +194,21 @@ export default function PengajuanPage() {
 
       if (error) throw error;
 
+      // Send email notification if status changed
+      if (oldStatus !== editStatus) {
+        try {
+          await supabase.functions.invoke('send-status-email', {
+            body: {
+              pengajuan_id: selectedPengajuan.id,
+              old_status: oldStatus,
+              new_status: editStatus,
+            },
+          });
+        } catch (emailError) {
+          console.error('Failed to send email notification:', emailError);
+        }
+      }
+
       toast({ title: 'Berhasil', description: 'Status pengajuan berhasil diperbarui' });
       setIsDetailOpen(false);
       fetchPengajuan();
@@ -151,6 +216,70 @@ export default function PengajuanPage() {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleGeneratePDF = async () => {
+    if (!selectedPengajuan) return;
+
+    setIsGeneratingPDF(true);
+    try {
+      const doc = generateSuratKeterangan(selectedPengajuan);
+      const blob = getPDFBlob(doc);
+      
+      // Upload to storage
+      const fileName = `${selectedPengajuan.nomor_pengajuan}.pdf`;
+      const filePath = `surat/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('surat-files')
+        .upload(filePath, blob, { 
+          upsert: true,
+          contentType: 'application/pdf'
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('surat-files')
+        .getPublicUrl(filePath);
+
+      // Update pengajuan with file URL and change status to SELESAI
+      const { error: updateError } = await supabase
+        .from('pengajuan_surat')
+        .update({ 
+          file_surat_url: publicUrl,
+          status: 'SELESAI',
+          processed_by: adminProfile?.id,
+        })
+        .eq('id', selectedPengajuan.id);
+
+      if (updateError) throw updateError;
+
+      // Send email notification
+      try {
+        await supabase.functions.invoke('send-status-email', {
+          body: {
+            pengajuan_id: selectedPengajuan.id,
+            old_status: selectedPengajuan.status,
+            new_status: 'SELESAI',
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send email notification:', emailError);
+      }
+
+      toast({ title: 'Berhasil', description: 'Surat berhasil digenerate dan diupload' });
+      
+      // Also download locally
+      downloadPDF(doc, `Surat-${selectedPengajuan.nomor_pengajuan}`);
+      
+      setIsDetailOpen(false);
+      fetchPengajuan();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -399,7 +528,7 @@ export default function PengajuanPage() {
           {selectedPengajuan && (
             <div className="space-y-6">
               {/* Status */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <StatusBadge status={selectedPengajuan.status} />
                 {selectedPengajuan.file_surat_url && (
                   <a 
@@ -412,6 +541,44 @@ export default function PengajuanPage() {
                   </a>
                 )}
               </div>
+
+              {/* Quick Action Buttons */}
+              {selectedPengajuan.status !== 'SELESAI' && (
+                <div className="flex flex-wrap gap-2 p-4 bg-primary/5 rounded-xl border border-primary/20">
+                  <p className="w-full text-sm font-medium text-foreground mb-2">Aksi Cepat:</p>
+                  
+                  {getNextStatus(selectedPengajuan.status) && (
+                    <Button 
+                      onClick={handleAdvanceStatus}
+                      disabled={isUpdating}
+                      className="gap-2"
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ArrowRight className="h-4 w-4" />
+                      )}
+                      Proses ke {getNextStatus(selectedPengajuan.status)}
+                    </Button>
+                  )}
+
+                  {(selectedPengajuan.status === 'DIPROSES' || selectedPengajuan.status === 'DISETUJUI') && (
+                    <Button 
+                      variant="outline"
+                      onClick={handleGeneratePDF}
+                      disabled={isGeneratingPDF}
+                      className="gap-2"
+                    >
+                      {isGeneratingPDF ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileText className="h-4 w-4" />
+                      )}
+                      Generate & Selesaikan
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {/* Mahasiswa Info */}
               <div className="grid md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-xl">
@@ -429,7 +596,10 @@ export default function PengajuanPage() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Email</Label>
-                  <p className="font-medium">{selectedPengajuan.mahasiswa?.email}</p>
+                  <p className="font-medium flex items-center gap-2">
+                    {selectedPengajuan.mahasiswa?.email}
+                    <Mail className="h-3 w-3 text-muted-foreground" />
+                  </p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">No. HP</Label>
@@ -498,6 +668,9 @@ export default function PengajuanPage() {
                         </Button>
                       )}
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Atau gunakan tombol "Generate & Selesaikan" untuk membuat surat otomatis
+                    </p>
                   </div>
                 )}
               </div>
