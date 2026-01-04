@@ -44,7 +44,7 @@ export default function HomePage() {
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 animate-slide-up">
               Surat Menyurat
-              <span className="block mt-2 gradient-primary bg-clip-text text-transparent">
+              <span className="block mt-2 text-primary">
                 Non-Akademik
               </span>
             </h1>
