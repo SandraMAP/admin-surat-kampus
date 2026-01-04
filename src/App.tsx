@@ -11,12 +11,15 @@ import SubmitPage from "./pages/student/SubmitPage";
 import TrackPage from "./pages/student/TrackPage";
 import AuthPage from "./pages/student/AuthPage";
 import RiwayatPage from "./pages/student/RiwayatPage";
+import ForgotPasswordPage from "./pages/student/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/student/ResetPasswordPage";
+import InstallPage from "./pages/student/InstallPage";
 
 // Admin Pages
-import LoginPage from "./pages/admin/LoginPage";
+import AdminLoginPage from "./pages/admin/LoginPage";
 import RegisterPage from "./pages/admin/RegisterPage";
-import ForgotPasswordPage from "./pages/admin/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/admin/ResetPasswordPage";
+import AdminForgotPasswordPage from "./pages/admin/ForgotPasswordPage";
+import AdminResetPasswordPage from "./pages/admin/ResetPasswordPage";
 import DashboardPage from "./pages/admin/DashboardPage";
 import PengajuanPage from "./pages/admin/PengajuanPage";
 import JenisSuratPage from "./pages/admin/JenisSuratPage";
@@ -60,11 +63,14 @@ const App = () => (
             <Route path="/ajukan" element={<SubmitPage />} />
             <Route path="/lacak" element={<TrackPage />} />
             <Route path="/riwayat" element={<RiwayatPage />} />
+            <Route path="/lupa-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/install" element={<InstallPage />} />
 
             {/* Admin Auth Routes */}
             <Route path="/admin" element={
               <AdminAuthGuard>
-                <LoginPage />
+                <AdminLoginPage />
               </AdminAuthGuard>
             } />
             <Route path="/admin/register" element={
@@ -72,8 +78,8 @@ const App = () => (
                 <RegisterPage />
               </AdminAuthGuard>
             } />
-            <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/admin/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/admin/forgot-password" element={<AdminForgotPasswordPage />} />
+            <Route path="/admin/reset-password" element={<AdminResetPasswordPage />} />
 
             {/* Admin Protected Routes */}
             <Route path="/admin/dashboard" element={

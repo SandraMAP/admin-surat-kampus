@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { FileText, Loader2, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,11 +7,13 @@ import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { StudentLayout } from '@/components/layout/StudentLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { PROGRAM_STUDI } from '@/data/programStudi';
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -216,6 +218,15 @@ export default function AuthPage() {
                         )}
                         Masuk
                       </Button>
+
+                      <div className="text-center">
+                        <Link
+                          to="/lupa-password"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Lupa password?
+                        </Link>
+                      </div>
                     </form>
                   </Form>
                 </TabsContent>
@@ -273,9 +284,20 @@ export default function AuthPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Program Studi</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Contoh: Teknik Informatika" {...field} />
-                            </FormControl>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Pilih program studi" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {PROGRAM_STUDI.map((prodi) => (
+                                  <SelectItem key={prodi} value={prodi}>
+                                    {prodi}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}

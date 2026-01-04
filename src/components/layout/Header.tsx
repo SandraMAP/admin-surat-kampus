@@ -1,4 +1,4 @@
-import { FileText, Menu, LogIn, LogOut, User } from 'lucide-react';
+import { FileText, Menu, LogIn, LogOut, User, Smartphone } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -10,6 +10,7 @@ const navLinks = [
   { label: 'Beranda', path: '/' },
   { label: 'Ajukan Surat', path: '/ajukan' },
   { label: 'Lacak Pengajuan', path: '/lacak' },
+  { label: 'Install App', path: '/install' },
 ];
 
 export function Header() {
