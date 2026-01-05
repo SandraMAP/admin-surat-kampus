@@ -6,7 +6,7 @@ const navItems = [
   { icon: Home, label: 'Beranda', path: '/' },
   { icon: FileText, label: 'Ajukan', path: '/ajukan' },
   { icon: Search, label: 'Lacak', path: '/lacak' },
-  { icon: User, label: 'Admin', path: '/admin' },
+  { icon: User, label: 'Akun', path: '/riwayat' },
 ];
 
 export function MobileNav() {

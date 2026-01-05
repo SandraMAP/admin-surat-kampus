@@ -73,19 +73,12 @@ export function Header() {
               </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Link to="/auth">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <LogIn className="h-4 w-4" />
-                  Login
-                </Button>
-              </Link>
-              <Link to="/admin">
-                <Button variant="ghost" size="sm">
-                  Admin
-                </Button>
-              </Link>
-            </div>
+            <Link to="/auth">
+              <Button variant="outline" size="sm" className="gap-2">
+                <LogIn className="h-4 w-4" />
+                Login
+              </Button>
+            </Link>
           )}
         </nav>
 
@@ -122,17 +115,12 @@ export function Header() {
                   </Button>
                 </>
               ) : (
-                <>
-                  <Link to="/auth" onClick={() => setOpen(false)}>
-                    <Button className="w-full gap-2">
-                      <LogIn className="h-4 w-4" />
-                      Login Mahasiswa
-                    </Button>
-                  </Link>
-                  <Link to="/admin" onClick={() => setOpen(false)}>
-                    <Button variant="outline" className="w-full">Admin Login</Button>
-                  </Link>
-                </>
+                <Link to="/auth" onClick={() => setOpen(false)}>
+                  <Button className="w-full gap-2">
+                    <LogIn className="h-4 w-4" />
+                    Login Mahasiswa
+                  </Button>
+                </Link>
               )}
             </div>
           </SheetContent>
