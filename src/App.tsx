@@ -23,6 +23,7 @@ import AdminResetPasswordPage from "./pages/admin/ResetPasswordPage";
 import DashboardPage from "./pages/admin/DashboardPage";
 import PengajuanPage from "./pages/admin/PengajuanPage";
 import JenisSuratPage from "./pages/admin/JenisSuratPage";
+import ProgramStudiPage from "./pages/admin/ProgramStudiPage";
 import MahasiswaPage from "./pages/admin/MahasiswaPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 
@@ -95,6 +96,11 @@ const App = () => (
             <Route path="/admin/jenis-surat" element={
               <ProtectedRoute>
                 <JenisSuratPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/program-studi" element={
+              <ProtectedRoute>
+                <ProgramStudiPage />
               </ProtectedRoute>
             } />
             <Route path="/admin/mahasiswa" element={
