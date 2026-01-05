@@ -9,7 +9,8 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  Building2
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ const sidebarItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
   { icon: FileText, label: 'Pengajuan Surat', path: '/admin/pengajuan' },
   { icon: FileStack, label: 'Jenis Surat', path: '/admin/jenis-surat' },
+  { icon: Building2, label: 'Program Studi', path: '/admin/program-studi' },
   { icon: Users, label: 'Data Mahasiswa', path: '/admin/mahasiswa' },
   { icon: Settings, label: 'Pengaturan', path: '/admin/settings' },
 ];

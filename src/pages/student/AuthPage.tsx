@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FileText, Loader2, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -13,7 +13,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { PROGRAM_STUDI } from '@/data/programStudi';
+
+interface ProgramStudi {
+  id: string;
+  kode: string;
+  nama: string;
+}
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -41,6 +46,23 @@ export default function AuthPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [programStudiList, setProgramStudiList] = useState<ProgramStudi[]>([]);
+
+  useEffect(() => {
+    fetchProgramStudi();
+  }, []);
+
+  const fetchProgramStudi = async () => {
+    const { data } = await supabase
+      .from('program_studi')
+      .select('id, kode, nama')
+      .eq('is_active', true)
+      .order('nama');
+    
+    if (data) {
+      setProgramStudiList(data as ProgramStudi[]);
+    }
+  };
 
   const loginForm = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -291,9 +313,9 @@ export default function AuthPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {PROGRAM_STUDI.map((prodi) => (
-                                  <SelectItem key={prodi} value={prodi}>
-                                    {prodi}
+                                {programStudiList.map((prodi) => (
+                                  <SelectItem key={prodi.id} value={prodi.nama}>
+                                    {prodi.nama}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

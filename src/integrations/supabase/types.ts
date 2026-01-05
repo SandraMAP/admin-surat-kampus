@@ -189,6 +189,36 @@ export type Database = {
           },
         ]
       }
+      program_studi: {
+        Row: {
+          created_at: string
+          fakultas: string | null
+          id: string
+          is_active: boolean | null
+          kode: string
+          nama: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fakultas?: string | null
+          id?: string
+          is_active?: boolean | null
+          kode: string
+          nama: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fakultas?: string | null
+          id?: string
+          is_active?: boolean | null
+          kode?: string
+          nama?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

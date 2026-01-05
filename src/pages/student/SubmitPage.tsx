@@ -16,6 +16,12 @@ import { useToast } from '@/hooks/use-toast';
 import { JenisSurat, Mahasiswa } from '@/types/database';
 import { User } from '@supabase/supabase-js';
 
+interface ProgramStudi {
+  id: string;
+  kode: string;
+  nama: string;
+}
+
 const formSchema = z.object({
   nama: z.string().min(3, 'Nama minimal 3 karakter').max(100),
   nim: z.string().min(5, 'NIM tidak valid').max(20),
@@ -34,6 +40,7 @@ export default function SubmitPage() {
   const [user, setUser] = useState<User | null>(null);
   const [mahasiswa, setMahasiswa] = useState<Mahasiswa | null>(null);
   const [jenisSuratList, setJenisSuratList] = useState<JenisSurat[]>([]);
+  const [programStudiList, setProgramStudiList] = useState<ProgramStudi[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -55,6 +62,7 @@ export default function SubmitPage() {
   useEffect(() => {
     checkAuth();
     fetchJenisSurat();
+    fetchProgramStudi();
   }, []);
 
   const checkAuth = async () => {
@@ -112,6 +120,18 @@ export default function SubmitPage() {
     }
 
     setJenisSuratList(data as JenisSurat[]);
+  };
+
+  const fetchProgramStudi = async () => {
+    const { data } = await supabase
+      .from('program_studi')
+      .select('id, kode, nama')
+      .eq('is_active', true)
+      .order('nama');
+    
+    if (data) {
+      setProgramStudiList(data as ProgramStudi[]);
+    }
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -340,9 +360,20 @@ export default function SubmitPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Program Studi</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Contoh: Teknik Informatika" {...field} />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Pilih program studi" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {programStudiList.map((prodi) => (
+                              <SelectItem key={prodi.id} value={prodi.nama}>
+                                {prodi.nama}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
