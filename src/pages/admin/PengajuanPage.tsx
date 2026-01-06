@@ -609,6 +609,10 @@ export default function PengajuanPage() {
                   <Label className="text-muted-foreground">Jenis Surat</Label>
                   <p className="font-medium">{selectedPengajuan.jenis_surat?.nama}</p>
                 </div>
+                <div>
+                  <Label className="text-muted-foreground">Tujuan Surat</Label>
+                  <p className="font-medium">{selectedPengajuan.jenis_surat?.tujuan_surat || 'Kepada Yth. Pihak Terkait'}</p>
+                </div>
               </div>
 
               {/* Keperluan */}

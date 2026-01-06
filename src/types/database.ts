@@ -5,6 +5,8 @@ export interface JenisSurat {
   kode: string;
   nama: string;
   deskripsi: string | null;
+  tujuan_surat: string | null;
+  template_surat: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
