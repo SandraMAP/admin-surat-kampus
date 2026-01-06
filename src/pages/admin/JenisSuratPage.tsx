@@ -23,7 +23,15 @@ export default function JenisSuratPage() {
   // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({ id: '', kode: '', nama: '', deskripsi: '', is_active: true });
+  const [formData, setFormData] = useState({ 
+    id: '', 
+    kode: '', 
+    nama: '', 
+    deskripsi: '', 
+    tujuan_surat: '', 
+    template_surat: '', 
+    is_active: true 
+  });
   const [isSaving, setIsSaving] = useState(false);
 
   // Delete
@@ -63,14 +71,36 @@ export default function JenisSuratPage() {
         kode: jenis.kode,
         nama: jenis.nama,
         deskripsi: jenis.deskripsi || '',
+        tujuan_surat: jenis.tujuan_surat || '',
+        template_surat: jenis.template_surat || '',
         is_active: jenis.is_active,
       });
       setIsEditing(true);
     } else {
-      setFormData({ id: '', kode: '', nama: '', deskripsi: '', is_active: true });
+      setFormData({ 
+        id: '', 
+        kode: '', 
+        nama: '', 
+        deskripsi: '', 
+        tujuan_surat: 'Kepada Yth. Pihak Terkait', 
+        template_surat: getDefaultTemplate(),
+        is_active: true 
+      });
       setIsEditing(false);
     }
     setIsFormOpen(true);
+  };
+
+  const getDefaultTemplate = () => {
+    return `Yang bertanda tangan di bawah ini, menerangkan bahwa:
+
+Nama: {{nama}}
+NIM: {{nim}}
+Program Studi: {{program_studi}}
+
+Adalah benar mahasiswa aktif yang memerlukan {{jenis_surat}} untuk keperluan: {{keperluan}}.
+
+Demikian surat keterangan ini dibuat untuk dapat dipergunakan sebagaimana mestinya.`;
   };
 
   const handleSave = async () => {
@@ -88,6 +118,8 @@ export default function JenisSuratPage() {
             kode: formData.kode,
             nama: formData.nama,
             deskripsi: formData.deskripsi || null,
+            tujuan_surat: formData.tujuan_surat || null,
+            template_surat: formData.template_surat || null,
             is_active: formData.is_active,
           })
           .eq('id', formData.id);
@@ -101,6 +133,8 @@ export default function JenisSuratPage() {
             kode: formData.kode,
             nama: formData.nama,
             deskripsi: formData.deskripsi || null,
+            tujuan_surat: formData.tujuan_surat || null,
+            template_surat: formData.template_surat || null,
             is_active: formData.is_active,
           });
 
@@ -139,8 +173,8 @@ export default function JenisSuratPage() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['Kode', 'Nama', 'Deskripsi', 'Status'];
-    const rows = jenisSuratList.map(j => [j.kode, j.nama, j.deskripsi || '', j.is_active ? 'Aktif' : 'Nonaktif']);
+    const headers = ['Kode', 'Nama', 'Deskripsi', 'Tujuan Surat', 'Status'];
+    const rows = jenisSuratList.map(j => [j.kode, j.nama, j.deskripsi || '', j.tujuan_surat || '', j.is_active ? 'Aktif' : 'Nonaktif']);
     const csvContent = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -292,7 +326,7 @@ export default function JenisSuratPage() {
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Edit' : 'Tambah'} Jenis Surat</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div>
               <Label>Kode</Label>
               <Input
@@ -319,6 +353,30 @@ export default function JenisSuratPage() {
                 placeholder="Deskripsi jenis surat"
                 className="mt-1"
               />
+            </div>
+            <div>
+              <Label>Tujuan Surat</Label>
+              <Input
+                value={formData.tujuan_surat}
+                onChange={(e) => setFormData({ ...formData, tujuan_surat: e.target.value })}
+                placeholder="Contoh: Kepada Yth. Pihak Terkait"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Tujuan surat akan otomatis ditentukan berdasarkan jenis surat
+              </p>
+            </div>
+            <div>
+              <Label>Template Surat</Label>
+              <Textarea
+                value={formData.template_surat}
+                onChange={(e) => setFormData({ ...formData, template_surat: e.target.value })}
+                placeholder="Template surat dengan placeholder..."
+                className="mt-1 min-h-[150px] font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Placeholder: {"{{nama}}, {{nim}}, {{program_studi}}, {{jenis_surat}}, {{tujuan_surat}}, {{keperluan}}, {{tanggal}}, {{nomor_pengajuan}}"}
+              </p>
             </div>
             <div className="flex items-center justify-between">
               <Label>Status Aktif</Label>
